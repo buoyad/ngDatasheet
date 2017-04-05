@@ -1,0 +1,25 @@
+{
+  "name": "ngdatasheet",
+  "version": "0.0.0",
+  "description": "Excel-esque datasheet for Angular 2.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buoyad/ngDatasheet.git"
+  },
+  "keywords": [
+    "angular",
+    "angular2",
+    "datasheet",
+    "datatable"
+  ],
+  "author": "Daniel Ayoub <daniel@ayoubd.com> (http://ayoubd.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/buoyad/ngDatasheet/issues"
+  },
+  "homepage": "https://github.com/buoyad/ngDatasheet#readme"
+}
