@@ -47,7 +47,7 @@ And bind to it in your template:
 ```
 Output:
 
-<div style="text-align: center"><img src="./example.png"></img></div>
+<div style="text-align: center"><img src="https://github.com/buoyad/ngDatasheet/blob/master/example.png"></img></div>
 
 ## Planned Features
 
