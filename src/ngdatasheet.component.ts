@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, Inject, forwardRef } from '@angular/core';
+import { Component, OnInit, Input, Output, Inject, forwardRef, EventEmitter } from '@angular/core';
 
 const TAB_KEY = 9;
 const ENTER_KEY = 13;
@@ -24,7 +24,7 @@ export enum HEADERS {
   </tr>  
   <tr *ngFor="let index of _h; let i = index;">
     <ds-header [side]="true" [index]="index"></ds-header>
-    <td *ngFor="let wi of _w">{{ _data[i][wi] }}</td>
+    <td [ngStyle]="{'text-align': alignment(_data[i][wi])}" *ngFor="let wi of _w">{{ _data[i][wi] }}</td>
   </tr>
 </table>
 `,
@@ -41,7 +41,7 @@ export enum HEADERS {
 
     td, ds-header {
       display: table-cell;
-      width: 45px;
+      width: 100px;
       height: 17px;
       font-size: 12px;
     }
@@ -49,10 +49,6 @@ export enum HEADERS {
     ds-header, th {
       background: #f5f5f5;
       color: #999;
-    }
-
-    td {
-      text-align: right;
     }
   `]
 })
@@ -91,6 +87,8 @@ export class NgDatasheetComponent implements OnInit {
     this.height = this.height | data.length;
   }
 
+  @Output() dataChange: EventEmitter<any> = new EventEmitter<any>();
+
   public _headers: string = 'both'
   @Input() set headers(value: string) {
     // if (!HEADERS[<any>value]) {
@@ -103,6 +101,11 @@ export class NgDatasheetComponent implements OnInit {
   ngOnInit(): void {
     this._w = Array(this.width).fill(null).map((x, i) => i);
     this._h = Array(this.height).fill(null).map((x, i) => i);
+  }
+
+  private alignment(value: number | string) {
+    if (typeof value === "number") return 'right';
+    else return 'left';
   }
 }
 
