@@ -1,10 +1,11 @@
 import { NgModule } from '@angular/core';
-
-import { NgDatasheetComponent, NgNestedComponent } from './ngdatasheet.component';
+import { CommonModule } from '@angular/common';
+import { NgDatasheetComponent, HeaderCellComponent } from './ngdatasheet.component';
 
 @NgModule({
-  declarations: [ NgDatasheetComponent, NgNestedComponent ],
-  exports: [ NgDatasheetComponent, NgNestedComponent ],
+  imports: [ CommonModule ],
+  declarations: [ NgDatasheetComponent, HeaderCellComponent ],
+  exports: [ NgDatasheetComponent ],
   providers: []
 })
 export class NgDatasheetModule { }
