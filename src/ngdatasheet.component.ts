@@ -19,11 +19,13 @@ export enum HEADERS {
 
 export class CoordinateMap {
   [propName: number]: Array<number>;
+  public empty: boolean = true;
 
   public add(i: number, j: number): void {
     if (!this.contains(i, j)) {
       if (!this[i]) this[i] = new Array<number>();
       this[i].push(j);
+      this.empty = false;
     }
   }
 
@@ -34,6 +36,7 @@ export class CoordinateMap {
   public clear(): void {
     for (let x of Object.keys(this)) {
       if (typeof this[<any>x] === 'object') delete this[<any>x];
+      this.empty = true;
     }
   }
 }
@@ -48,7 +51,19 @@ export class CoordinateMap {
   </tr>  
   <tr *ngFor="let index of _h; let i = index;">
     <ds-header [side]="true" [index]="index+1"></ds-header>
-    <td (mouseover)="onHover($event, i, j)" (mousedown)="beginSelect($event, i, j)" [ngStyle]="{'text-align': alignment(_data[i][j])}" *ngFor="let j of _w" [ngClass]="{'selected': isSelected(i, j)}">{{ _data[i][j] }}</td>
+    <td *ngFor="let j of _w" 
+        (mouseover)="onHover($event, i, j)" 
+        (mousedown)="beginSelect($event, i, j)" 
+        [ngStyle]="{'text-align': alignment(_data[i][j])}"
+        [ngClass]="{'selected': isSelected(i, j)}"
+        (dblclick)="this.editCell(true, i, j)">
+          <input *ngIf="isEditMode(i, j); else display" 
+                 [id]="'input' + i + '_' + j"
+                 [(ngModel)]="_data[i][j]"/>
+          <ng-template #display>
+            {{ _data[i][j] }}
+          </ng-template>
+      </td>
   </tr>
 </table>
 `,
@@ -80,6 +95,20 @@ export class CoordinateMap {
     ds-header, th {
       background: #f5f5f5;
       color: #999;
+    }
+
+    input {
+      width: 100px;
+      box-sizing: border-box;
+      height: 17px;
+      font-size: 12px;
+      padding: 1px;
+      border-width: 0px;
+      outline: 1px solid blue;
+    }
+
+    input:focus {
+      outline-offset: 0;
     }
   `]
 })
@@ -134,10 +163,48 @@ export class NgDatasheetComponent implements OnInit {
   private _isSelecting: boolean = false;
   private _startX: number; 
   private _startY: number;
+  private _isEditing: boolean = false;
+  private _editCells: any;
 
   ngOnInit(): void {
     this._w = Array(this.width).fill(null).map((x, i) => i);
     this._h = Array(this.height).fill(null).map((x, i) => i);
+
+    document.addEventListener('keydown', ($event) => {
+      if (!this.selected.empty) {
+        if (!this._isEditing && this.isAlphanumeric($event.keyCode)) {
+          this.editCell(true, this._startX, this._startY, String.fromCharCode($event.keyCode));
+        }
+      }
+    });
+
+  }
+
+  public editCell(setting: boolean, i?: number, j?: number, init?: string) {
+    if (setting) {
+      this._isEditing = true;
+      this._editCells = [i, j];
+      setTimeout(() => {
+        let input: HTMLInputElement = 
+                  <HTMLInputElement>document
+                  .getElementById('input' + i + '_' + j);
+        input.focus();
+        if (init) input.value = init;
+        else input.select();
+      }, 1);
+    } else {
+      this._isEditing = false;
+      this._editCells = undefined;
+    }
+  }
+
+  private isEditMode(i: number, j: number) {
+    return (this._editCells && this._editCells[0] === i && this._editCells[1] === j);
+  }
+
+  private isAlphanumeric(code: number): boolean {
+    let inp = String.fromCharCode(code);
+    return (/[a-zA-Z0-9-_ ]/.test(inp))
   }
 
   public fillSelection(x1: number, y1: number, x2: number, y2: number) {
@@ -161,6 +228,8 @@ export class NgDatasheetComponent implements OnInit {
   }
 
   private beginSelect(event: MouseEvent, i: number, j: number) {
+    if (this.isEditMode(i, j)) return;
+    else if (this._isEditing) this.editCell(false);
     event.preventDefault();
     if (event.ctrlKey) {
       this.selected.clear();
