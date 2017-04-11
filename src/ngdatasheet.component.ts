@@ -61,7 +61,9 @@ export class CoordinateMap {
                  [id]="'input' + i + '_' + j"
                  [(ngModel)]="_data[i][j]"/>
           <ng-template #display>
-            {{ _data[i][j] }}
+            <span style="display: block">
+              {{ _data[i][j] }}
+            </span>
           </ng-template>
       </td>
   </tr>
@@ -88,7 +90,11 @@ export class CoordinateMap {
     td, ds-header {
       display: table-cell;
       width: 100px;
+      max-width: 100px;
       height: 17px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
       font-size: 12px;
     }
 
@@ -98,9 +104,9 @@ export class CoordinateMap {
     }
 
     input {
-      width: 100px;
+      width: 100%;
       box-sizing: border-box;
-      height: 17px;
+      height: 100%;
       font-size: 12px;
       padding: 1px;
       border-width: 0px;
@@ -176,11 +182,33 @@ export class NgDatasheetComponent implements OnInit {
           this.editCell(true, this._startX, this._startY, String.fromCharCode($event.keyCode));
         }
       }
+    });    
+
+    document.addEventListener('keydown', ($event: KeyboardEvent) => {
+      if (this.isSelected) {
+        switch ($event.keyCode) {
+          case UP_KEY:
+            if (this._startX > 0) this._startX--
+            break;
+          case DOWN_KEY:
+            if (this._startX < this.height - 1) this._startX++
+            break;
+          case RIGHT_KEY:
+            if (this._startY < this.width - 1) this._startY++;
+            break;
+          case LEFT_KEY:
+            if (this._startY > 0) this._startY--;
+            break;            
+        }
+        this.selected.clear();
+        this.selected.add(this._startX, this._startY);
+      }
     });
 
   }
 
   public editCell(setting: boolean, i?: number, j?: number, init?: string) {
+    this.dataChange.emit(this._data);
     if (setting) {
       this._isEditing = true;
       this._editCells = [i, j];

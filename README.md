@@ -55,4 +55,7 @@ Output:
 * Inline expression evaluation  
 * `data` property: 
   * Support for relative expressioning via array member property  
-  * Support for defining cells as read-only
+  * Support for defining cells as read-only  
+  * Support for inline templating with the following API:  
+    * Defining templates within the `<ng-datasheet></ng-datasheet>` using a directive  
+    * Injecting `<ng-template>` with selector as supplied in the appropriate spot in the `data` array
