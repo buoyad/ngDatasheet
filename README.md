@@ -1,4 +1,4 @@
-# NgDatasheet [0.1.0]
+# NgDatasheet [0.2.0]
 
 Datasheet component for Angular 2 that allows user interaction and prettified display alike.
 
