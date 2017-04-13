@@ -10,6 +10,7 @@ const UP_KEY = 38;
 const DOWN_KEY = 40;
 const DELETE_KEY = 46;
 const CTRL_KEY = 22;
+const SHIFT_KEY = 16;
 
 export enum HEADERS {
   top,
@@ -17,7 +18,7 @@ export enum HEADERS {
   both
 }
 
-export class CoordinateMap {
+export class CoordinateMap implements Iterable<[number, number]> {
   [propName: number]: Array<number>;
   public empty: boolean = true;
 
@@ -38,6 +39,12 @@ export class CoordinateMap {
       if (typeof this[<any>x] === 'object') delete this[<any>x];
       this.empty = true;
     }
+  }
+
+  [Symbol.iterator]() {
+    let resArray: Array<[number, number]> = new Array<[number, number]>();
+    for (let x of Object.keys(this)) if (!isNaN(<any>x)) for (let y of this[+x]) resArray.push([+x, y]);
+    return resArray[Symbol.iterator]();
   }
 }
 
@@ -61,7 +68,7 @@ export class CoordinateMap {
                  [id]="'input' + i + '_' + j"
                  [(ngModel)]="_data[i][j]"/>
           <ng-template #display>
-            <span style="display: block">
+            <span>
               {{ _data[i][j] }}
             </span>
           </ng-template>
@@ -166,68 +173,128 @@ export class NgDatasheetComponent implements OnInit {
 
   public selected: CoordinateMap = new CoordinateMap();
 
-  private _isSelecting: boolean = false;
-  private _startX: number; 
-  private _startY: number;
-  private _isEditing: boolean = false;
-  private _editCells: any;
+  public get isEditing(): boolean {
+    return this._isEditing;
+  }
+
+  public get editedCell(): [number, number] {
+    return this._editCell;
+  }
+
+  private _isSelecting: boolean = false; // Flag if user is actively selecting cells (mouse down, hovering on cells)            
+  private _start: [number, number];         // Holder for cell that user started selection over
+  private _isEditing: boolean = false;   // Flag for if user is actively editing a cell (consider deprecating, refactor to use _editCell)
+  private _editCell: [number, number];      // Holder for cell that user is editing
 
   ngOnInit(): void {
     this._w = Array(this.width).fill(null).map((x, i) => i);
     this._h = Array(this.height).fill(null).map((x, i) => i);
-
-    document.addEventListener('keydown', ($event) => {
-      if (!this.selected.empty) {
-        if (!this._isEditing && this.isAlphanumeric($event.keyCode)) {
-          this.editCell(true, this._startX, this._startY, String.fromCharCode($event.keyCode));
-        }
+    if (this.height > this._data.length) {
+      for (let i = this._data.length; i < this.height; i++) {
+        this._data[i] = new Array();
       }
-    });    
+      this.dataChange.emit(this._data);
+    }
 
-    document.addEventListener('keydown', ($event: KeyboardEvent) => {
-      if (this.isSelected) {
-        switch ($event.keyCode) {
-          case UP_KEY:
-            if (this._startX > 0) this._startX--
-            break;
-          case DOWN_KEY:
-            if (this._startX < this.height - 1) this._startX++
-            break;
-          case RIGHT_KEY:
-            if (this._startY < this.width - 1) this._startY++;
-            break;
-          case LEFT_KEY:
-            if (this._startY > 0) this._startY--;
-            break;            
-        }
-        this.selected.clear();
-        this.selected.add(this._startX, this._startY);
-      }
-    });
-
+    this.registerHandlers();
   }
 
-  public editCell(setting: boolean, i?: number, j?: number, init?: string) {
+  private registerHandlers() {
+    document.addEventListener('keypress', ($event) => {
+      if (!this.selected.empty) {
+        if (!this._isEditing && this.isAlphanumeric($event.keyCode)) {
+          this.editCell(this._start[0], this._start[1], String.fromCharCode($event.keyCode));
+          this.selected.clear();
+          this.dataChange.emit(this._data);
+        }
+      }
+    });   
+    document.addEventListener('keydown', ($event: KeyboardEvent) => {
+      if (this.isSelected) {
+        let moved: boolean = false;
+        switch ($event.keyCode) {
+          case UP_KEY:
+            $event.preventDefault();
+            if (this._isEditing) this.onEditComplete();
+            if (this._start[0] > 0) this._start[0]--;
+            moved = true;
+            break;
+          case DOWN_KEY:
+            $event.preventDefault();
+            if (this._isEditing) this.onEditComplete();
+            if (this._start[0] < this.height - 1) this._start[0]++;
+            moved = true;
+            break;
+          case RIGHT_KEY:
+            $event.preventDefault();
+            if (this._isEditing) this.onEditComplete();
+            if (this._start[1] < this.width - 1) this._start[1]++;
+            moved = true;
+            break;
+          case LEFT_KEY:
+            $event.preventDefault();
+            if (this._isEditing) this.onEditComplete();
+            if (this._start[1] > 0) this._start[1]--;
+            moved = true;
+            break;     
+          case CTRL_KEY:
+            return;   
+          case DELETE_KEY:
+            this.clearSelection();
+            break;
+        }
+        if (moved) {
+          this.selected.clear();
+          this.selected.add(this._start[0], this._start[1]);
+        }
+      }
+    });
+  }
+
+  public editCell(i: number, j: number, init?: string) {
+    this._isEditing = true;
+    this._editCell = [i, j];
+    setTimeout(() => {                                         // Wait for input to be rendered
+      let input: HTMLInputElement = 
+                <HTMLInputElement>document
+                .getElementById('input' + i + '_' + j);
+      input.focus();
+      if (init) {
+        this._data[i][j] = init;
+        this.dataChange.emit(this._data);
+      }
+      else input.select();
+    }, 1);
+  }
+
+  private onEditComplete() {
+    /* Check if value is a number */
+    let [i, j] = this._editCell;
+    let val = this._data[i][j];
+    // If so, convert to number
+    if (!isNaN(val)) this._data[i][j] = +val;
+
+    // Empty out variables and emit new data
+    this._isEditing = false;
+    this._editCell = null;
     this.dataChange.emit(this._data);
-    if (setting) {
-      this._isEditing = true;
-      this._editCells = [i, j];
-      setTimeout(() => {
-        let input: HTMLInputElement = 
-                  <HTMLInputElement>document
-                  .getElementById('input' + i + '_' + j);
-        input.focus();
-        if (init) input.value = init;
-        else input.select();
-      }, 1);
-    } else {
-      this._isEditing = false;
-      this._editCells = undefined;
+
+    // console.log(isNaN(<any>val))
+    // if (!isNaN(<any>val)) {
+    //   this._data[i][j] = <number> val;
+    // } 
+    // console.log(this._data[i][j], typeof this._data[i][j])
+  }
+
+  public clearSelection() {
+    if (!this.selected.empty) {
+      for (let val of this.selected) this._data[val[0]][val[1]] = undefined;
+      this.dataChange.emit(this._data);
     }
   }
 
   private isEditMode(i: number, j: number) {
-    return (this._editCells && this._editCells[0] === i && this._editCells[1] === j);
+    return (this._editCell && this._editCell[0] === i && this._editCell[1] === j);
   }
 
   private isAlphanumeric(code: number): boolean {
@@ -257,7 +324,7 @@ export class NgDatasheetComponent implements OnInit {
 
   private beginSelect(event: MouseEvent, i: number, j: number) {
     if (this.isEditMode(i, j)) return;
-    else if (this._isEditing) this.editCell(false);
+    else if (this._isEditing) this.onEditComplete();
     event.preventDefault();
     if (event.ctrlKey) {
       this.selected.clear();
@@ -266,8 +333,7 @@ export class NgDatasheetComponent implements OnInit {
     this.selected.clear();
     this._isSelecting = true;
     this.selected.add(i, j);
-    this._startX = i;
-    this._startY = j;
+    this._start = [i, j];
     document.addEventListener('mouseup', () => {
       this._isSelecting = false;
       document.removeEventListener('mouseup');
@@ -276,7 +342,7 @@ export class NgDatasheetComponent implements OnInit {
 
   private onHover(event: MouseEvent, i: number, j: number) {
     if (this._isSelecting) {
-      this.fillSelection(this._startX, this._startY, i, j);
+      this.fillSelection(this._start[0], this._start[1], i, j);
     }
   }
 

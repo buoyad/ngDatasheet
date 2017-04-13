@@ -1,3 +1,13 @@
+## 0.3.0 (unpublished)
+
+* Refactored edit cell code to more clearly separate responsibilities  
+* Changed a bunch of types  
+* Added iterator to `CoordinateMap`  
+* Fixed a bug that would throw an error if a `[height]` was specified larger than `data.length`  
+* Added ability to clear selected cells via delete key or public method `clearSelection`  
+* Fixed a bug that didn't allow users to deselect cells when holding ctrl  
+
+
 ## 0.2.0
 
 * Removed some console messages

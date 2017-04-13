@@ -51,10 +51,9 @@ Output:
 
 ## Planned Features
 
-* Interactivity  
-* Inline expression evaluation  
+* Inline expression evaluation 
 * `data` property: 
-  * Support for relative expressioning via array member property  
+  * Support for relative expressioning via property  
   * Support for defining cells as read-only  
   * Support for inline templating with the following API:  
     * Defining templates within the `<ng-datasheet></ng-datasheet>` using a directive  
