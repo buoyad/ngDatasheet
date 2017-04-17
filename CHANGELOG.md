@@ -6,6 +6,8 @@
 * Fixed a bug that would throw an error if a `[height]` was specified larger than `data.length`  
 * Added ability to clear selected cells via delete key or public method `clearSelection`  
 * Fixed a bug that didn't allow users to deselect cells when holding ctrl  
+* Added showcase site  
+* Refactored some `ngIfElse`s for compatibility with Angular 2.x.x  
 
 
 ## 0.2.0

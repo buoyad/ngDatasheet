@@ -18,7 +18,7 @@ export enum HEADERS {
   both
 }
 
-export class CoordinateMap implements Iterable<[number, number]> {
+export class CoordinateMap {
   [propName: number]: Array<number>;
   public empty: boolean = true;
 
@@ -41,10 +41,10 @@ export class CoordinateMap implements Iterable<[number, number]> {
     }
   }
 
-  [Symbol.iterator]() {
+  array(): Array<[number, number]> {
     let resArray: Array<[number, number]> = new Array<[number, number]>();
     for (let x of Object.keys(this)) if (!isNaN(<any>x)) for (let y of this[+x]) resArray.push([+x, y]);
-    return resArray[Symbol.iterator]();
+    return resArray;
   }
 }
 
@@ -63,15 +63,15 @@ export class CoordinateMap implements Iterable<[number, number]> {
         (mousedown)="beginSelect($event, i, j)" 
         [ngStyle]="{'text-align': alignment(_data[i][j])}"
         [ngClass]="{'selected': isSelected(i, j)}"
-        (dblclick)="this.editCell(true, i, j)">
-          <input *ngIf="isEditMode(i, j); else display" 
+        (dblclick)="this.editCell(i, j)">
+          <input *ngIf="isEditMode(i, j)" 
                  [id]="'input' + i + '_' + j"
                  [(ngModel)]="_data[i][j]"/>
-          <ng-template #display>
+          <template [ngIf]="!isEditMode(i, j)">
             <span>
               {{ _data[i][j] }}
             </span>
-          </ng-template>
+          </template>
       </td>
   </tr>
 </table>
@@ -171,8 +171,6 @@ export class NgDatasheetComponent implements OnInit {
 
   public nm: Map<number, string | number>;
 
-  public selected: CoordinateMap = new CoordinateMap();
-
   public get isEditing(): boolean {
     return this._isEditing;
   }
@@ -185,6 +183,7 @@ export class NgDatasheetComponent implements OnInit {
   private _start: [number, number];         // Holder for cell that user started selection over
   private _isEditing: boolean = false;   // Flag for if user is actively editing a cell (consider deprecating, refactor to use _editCell)
   private _editCell: [number, number];      // Holder for cell that user is editing
+  public selected: CoordinateMap = new CoordinateMap();
 
   ngOnInit(): void {
     this._w = Array(this.width).fill(null).map((x, i) => i);
@@ -239,6 +238,10 @@ export class NgDatasheetComponent implements OnInit {
             break;     
           case CTRL_KEY:
             return;   
+          case ENTER_KEY:
+            if (this._isEditing) this.onEditComplete();
+            if(this._start) this.fillSelection(this._start[0], this._start[1], this._start[0], this._start[1]);
+            break;
           case DELETE_KEY:
             this.clearSelection();
             break;
@@ -288,7 +291,7 @@ export class NgDatasheetComponent implements OnInit {
 
   public clearSelection() {
     if (!this.selected.empty) {
-      for (let val of this.selected) this._data[val[0]][val[1]] = undefined;
+      for (let val of this.selected.array()) this._data[val[0]][val[1]] = undefined;
       this.dataChange.emit(this._data);
     }
   }
@@ -354,8 +357,8 @@ export class NgDatasheetComponent implements OnInit {
 @Component({
   selector: 'ds-header',
   template: `
-    <th *ngIf="top; else sideBlock">{{ letters }}</th>
-    <ng-template #sideBlock><th>{{ index }}</th></ng-template>
+    <th *ngIf="top">{{ letters }}</th>
+    <template [ngIf]="!top" #sideBlock><th>{{ index }}</th></template>
   `,
   styles: [`
 th {
