@@ -45,3 +45,6 @@ Thumbs.db
 *.map
 *.d.ts
 *.tgz
+
+# Include site js files
+!docs/*.js
