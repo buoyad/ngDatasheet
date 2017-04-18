@@ -1,4 +1,8 @@
-## 0.3.0 (unpublished)
+## 0.4.0
+
+* `ngdatasheet` is compatible with targeting es5
+
+## 0.3.0 
 
 * Refactored edit cell code to more clearly separate responsibilities  
 * Changed a bunch of types  

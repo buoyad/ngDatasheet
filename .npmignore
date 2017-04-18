@@ -45,3 +45,5 @@ Thumbs.db
 !*.d.ts
 *.tgz
 site
+docs
+*.png
