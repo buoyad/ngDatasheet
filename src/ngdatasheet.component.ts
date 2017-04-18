@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, Inject, forwardRef, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, Output, Inject, Renderer2, forwardRef, EventEmitter } from '@angular/core';
 import { Observable } from 'rxjs/Rx';
 
 
@@ -125,7 +125,7 @@ export class CoordinateMap {
     }
   `]
 })
-export class NgDatasheetComponent implements OnInit {
+export class NgDatasheetComponent implements OnInit, OnDestroy {
 
   @Input() public set nameMap(nm: Map<number, string | number>) {
     this.nm = nm;
@@ -184,6 +184,10 @@ export class NgDatasheetComponent implements OnInit {
   private _isEditing: boolean = false;   // Flag for if user is actively editing a cell (consider deprecating, refactor to use _editCell)
   private _editCell: [number, number];      // Holder for cell that user is editing
   public selected: CoordinateMap = new CoordinateMap();
+  private moveListener: () => void;
+  private editListener: () => void;
+
+  constructor(private renderer: Renderer2) { }
 
   ngOnInit(): void {
     this._w = Array(this.width).fill(null).map((x, i) => i);
@@ -198,8 +202,12 @@ export class NgDatasheetComponent implements OnInit {
     this.registerHandlers();
   }
 
+  ngOnDestroy(): void {
+    this.deRegisterHandlers();
+  }
+
   private registerHandlers() {
-    document.addEventListener('keypress', ($event) => {
+    this.editListener = this.renderer.listen('document', 'keypress', ($event) => {
       if (!this.selected.empty) {
         if (!this._isEditing && this.isAlphanumeric($event.keyCode) && !this.selected.empty) {
           this.editCell(this._start[0], this._start[1], String.fromCharCode($event.keyCode));
@@ -207,9 +215,9 @@ export class NgDatasheetComponent implements OnInit {
           this.dataChange.emit(this._data);
         }
       }
-    });   
-    document.addEventListener('keydown', ($event: KeyboardEvent) => {
-      if (!this.selected.empty) {
+    });
+    this.moveListener = this.renderer.listen('document', 'keydown', ($event) => {
+      if (!this.selected.empty || this._isEditing) {
         let moved: boolean = false;
         switch ($event.keyCode) {
           case UP_KEY:
@@ -235,12 +243,12 @@ export class NgDatasheetComponent implements OnInit {
             if (this._isEditing) this.onEditComplete();
             if (this._start[1] > 0) this._start[1]--;
             moved = true;
-            break;     
+            break;
           case CTRL_KEY:
-            return;   
+            return;
           case ENTER_KEY:
             if (this._isEditing) this.onEditComplete();
-            if(this._start) this.fillSelection(this._start[0], this._start[1], this._start[0], this._start[1]);
+            if (this._start) this.fillSelection(this._start[0], this._start[1], this._start[0], this._start[1]);
             break;
           case DELETE_KEY:
             this.clearSelection();
@@ -251,16 +259,21 @@ export class NgDatasheetComponent implements OnInit {
           this.selected.add(this._start[0], this._start[1]);
         }
       }
-    });
+    })
+  }
+
+  private deRegisterHandlers(): void {
+    this.moveListener();
+    this.editListener();
   }
 
   public editCell(i: number, j: number, init?: string) {
     this._isEditing = true;
     this._editCell = [i, j];
     setTimeout(() => {                                         // Wait for input to be rendered
-      let input: HTMLInputElement = 
-                <HTMLInputElement>document
-                .getElementById('input' + i + '_' + j);
+      let input: HTMLInputElement =
+        <HTMLInputElement>document
+          .getElementById('input' + i + '_' + j);
       input.focus();
       if (init) {
         this._data[i][j] = init;

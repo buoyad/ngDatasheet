@@ -1,3 +1,9 @@
+## 0.5.0
+
+* Fixed bug with not being able to exit directly from editing cell  
+* Added `ngOnDestroy` binding to clean up event listeners  
+* 
+
 ## 0.4.1
 
 * Fixed bug with keypress event listeners
