@@ -12,9 +12,40 @@
       padding: 0;
       font-family: Open Sans,sans-serif;
     }
+
+    #loading {
+      background: linear-gradient(47deg, #f44336, #e91e63, #9a1497);
+      width: 100vw;
+      height: 100vh;
+      background-size: 600% 600%;
+
+      -webkit-animation: loading 2s ease;
+      -moz-animation: loading 2s ease;
+      animation: loading 2s ease;
+    }
+
+    @-webkit-keyframes loading {
+        0%{background-position:0% 2%}
+        50%{background-position:100% 99%}
+        100%{background-position:0% 2%}
+    }
+
+    @-moz-keyframes loading {
+        0%{background-position:0% 2%}
+        50%{background-position:100% 99%}
+        100%{background-position:0% 2%}
+    }
+    
+    @keyframes loading { 
+        0%{background-position:0% 2%}
+        50%{background-position:100% 99%}
+        100%{background-position:0% 2%}
+    }
     </style>
   </head>
   <body>
-    <app-root>Loading...</app-root>
+    <app-root>
+      <div id="loading"></div>
+    </app-root>
   </body>
 </html>

@@ -201,7 +201,7 @@ export class NgDatasheetComponent implements OnInit {
   private registerHandlers() {
     document.addEventListener('keypress', ($event) => {
       if (!this.selected.empty) {
-        if (!this._isEditing && this.isAlphanumeric($event.keyCode)) {
+        if (!this._isEditing && this.isAlphanumeric($event.keyCode) && !this.selected.empty) {
           this.editCell(this._start[0], this._start[1], String.fromCharCode($event.keyCode));
           this.selected.clear();
           this.dataChange.emit(this._data);
@@ -209,7 +209,7 @@ export class NgDatasheetComponent implements OnInit {
       }
     });   
     document.addEventListener('keydown', ($event: KeyboardEvent) => {
-      if (this.isSelected) {
+      if (!this.selected.empty) {
         let moved: boolean = false;
         switch ($event.keyCode) {
           case UP_KEY:

@@ -1,3 +1,7 @@
+## 0.4.1
+
+* Fixed bug with keypress event listeners
+
 ## 0.4.0
 
 * `ngdatasheet` is compatible with targeting es5
