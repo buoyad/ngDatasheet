@@ -64,14 +64,14 @@ export class CoordinateMap {
         [ngStyle]="{'text-align': alignment(_data[i][j])}"
         [ngClass]="{'selected': isSelected(i, j)}"
         (dblclick)="this.editCell(i, j)">
-          <input *ngIf="isEditMode(i, j)" 
+          <input *ngIf="isEditMode(i, j); else display" 
                  [id]="'input' + i + '_' + j"
                  [(ngModel)]="_data[i][j]"/>
-          <template [ngIf]="!isEditMode(i, j)">
+          <ng-template #display>
             <span>
               {{ _data[i][j] }}
             </span>
-          </template>
+          </ng-template>
       </td>
   </tr>
 </table>
@@ -357,8 +357,8 @@ export class NgDatasheetComponent implements OnInit {
 @Component({
   selector: 'ds-header',
   template: `
-    <th *ngIf="top">{{ letters }}</th>
-    <template [ngIf]="!top" #sideBlock><th>{{ index }}</th></template>
+    <th *ngIf="top; else sideBlock">{{ letters }}</th>
+    <ng-template #sideBlock><th>{{ index }}</th></ng-template>
   `,
   styles: [`
 th {
