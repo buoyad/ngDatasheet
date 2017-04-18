@@ -43,4 +43,5 @@ Thumbs.db
 # Ignored files
 *.ts
 !*.d.ts
-tester
+*.tgz
+site

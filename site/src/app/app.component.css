@@ -1,0 +1,27 @@
+#hero {
+  width: 100%;
+  background: linear-gradient(141deg, #f44336 0%, #E91E63 51%, #C2185B 75%);
+  padding: 50px 0;
+  color: white;
+  text-align: center;
+}
+
+#hero span {
+  font-size: 18px;
+}
+
+main {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+main h3 {
+  color: #E91E63;
+}
+
+.demo {
+  margin: 0 auto;
+  padding: 7px;
+  box-shadow: 0 0 5px 0 #888;
+  border-radius: 2px;
+}

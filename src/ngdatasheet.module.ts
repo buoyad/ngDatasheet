@@ -5,7 +5,7 @@ import { NgDatasheetComponent, HeaderCellComponent } from './ngdatasheet.compone
 
 @NgModule({
   imports: [ CommonModule, FormsModule ],
-  declarations: [ NgDatasheetComponent, HeaderCellComponent ],
+  declarations: [ HeaderCellComponent, NgDatasheetComponent ],
   exports: [ NgDatasheetComponent ],
   providers: []
 })
