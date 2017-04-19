@@ -48,31 +48,51 @@ export class CoordinateMap {
   }
 }
 
+export interface Cell {
+  value: string | number;
+  readOnly?: boolean;
+  selector?: string; // NYI
+}
+
 @Component({
   selector: 'ng-datasheet',
   template: `
   <table>
   <tr>
     <th></th>
-    <ds-header *ngFor="let index of _w" [top]="true" [index]="index+1"></ds-header>
+    <ds-header class="readonly" *ngFor="let index of _w" [top]="true" [index]="index+1"></ds-header>
   </tr>  
   <tr *ngFor="let index of _h; let i = index;">
-    <ds-header [side]="true" [index]="index+1"></ds-header>
-    <td *ngFor="let j of _w" 
-        (mouseover)="onHover($event, i, j)" 
-        (mousedown)="beginSelect($event, i, j)" 
-        [ngStyle]="{'text-align': alignment(_data[i][j])}"
-        [ngClass]="{'selected': isSelected(i, j)}"
-        (dblclick)="this.editCell(i, j)">
-          <input *ngIf="isEditMode(i, j); else display" 
-                 [id]="'input' + i + '_' + j"
-                 [(ngModel)]="_data[i][j]"/>
-          <ng-template #display>
+    <ds-header class="readonly" [side]="true" [index]="index+1"></ds-header>
+    <ng-template ngFor let-j [ngForOf]="_w">
+      <ng-template [ngIf]="!isCell(_data[i][j])"> <!-- Not a complexly defined cell -->          
+        <td (mouseover)="onHover($event, i, j)" 
+            (mousedown)="beginSelect($event, i, j)"
+            [ngStyle]="{'text-align': alignment(_data[i][j])}"
+            [ngClass]="{'selected': isSelected(i, j)}"
+            (dblclick)="this.editCell(i, j)">
+            <input *ngIf="isEditMode(i, j)" 
+                  [id]="'input' + i + '_' + j"
+                  [(ngModel)]="_data[i][j]"/>
+            <ng-template [ngIf]="!isEditMode(i, j)">
+              <span>
+                {{ _data[i][j] }}
+              </span>
+            </ng-template>
+        </td>
+      </ng-template>
+      <ng-template [ngIf]="isCell(_data[i][j])"> <!-- Is a complexly defined cell -->
+        <!--<ng-content select="[transclusion]"> </ng-content>-->
+        <td (mouseover)="onHover($event, i, j)"
+            (mousedown)="beginSelect($event, i, j)"
+            [ngStyle]="{'text-align': alignment(_data[i][j].value)}"
+            [ngClass]="{'selected': isSelected(i, j), 'readonly': _data[i][j].readOnly}">
             <span>
-              {{ _data[i][j] }}
+              {{ _data[i][j].value }}
             </span>
-          </ng-template>
-      </td>
+        </td>
+      </ng-template>
+    </ng-template>
   </tr>
 </table>
 `,
@@ -90,11 +110,11 @@ export class CoordinateMap {
       box-shadow: inset 0 -100px 0 rgba(33,133,208,.15);
     } 
 
-    table, td, ds-header {      
+    table, td, .readonly {      
       border: 1px solid #ececec;
     }
 
-    td, ds-header {
+    td, .readonly {
       display: table-cell;
       width: 100px;
       max-width: 100px;
@@ -105,9 +125,16 @@ export class CoordinateMap {
       font-size: 12px;
     }
 
-    ds-header, th {
+    .readonly, th {
       background: #f5f5f5;
+    }
+
+    .readonly {      
       color: #999;
+    }
+
+    ds-header {
+      vertical-align: middle;
     }
 
     input {
@@ -146,7 +173,7 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
   @Input() public height: number;
 
   public _data: any[][];
-  @Input() set data(data: any[][]) {
+  @Input() set data(data: (string | number | Cell)[][]) {
     this._data = data;
 
     if (!this.width) {
@@ -184,8 +211,11 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
   private _isEditing: boolean = false;   // Flag for if user is actively editing a cell (consider deprecating, refactor to use _editCell)
   private _editCell: [number, number];      // Holder for cell that user is editing
   public selected: CoordinateMap = new CoordinateMap();
+
+  /* Listeners */
   private moveListener: () => void;
   private editListener: () => void;
+  private clickListener: () => void;
 
   constructor(private renderer: Renderer2) { }
 
@@ -206,9 +236,20 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
     this.deRegisterHandlers();
   }
 
+  private isEditable(cell: Cell | number | string): boolean {
+    if (this.isCell(cell)) {
+      return !cell.readOnly;
+    } else return true;
+  }
+
   private registerHandlers() {
+    this.clickListener = this.renderer.listen('window', 'mousedown', ($event) => {
+      setTimeout(() => {
+        if (!this._isSelecting) this.selected.clear();
+      }, 0)
+    })
     this.editListener = this.renderer.listen('document', 'keypress', ($event) => {
-      if (!this.selected.empty) {
+      if (!this.selected.empty && this.isEditable(this._data[this._start[0]][this._start[1]])) {
         if (!this._isEditing && this.isAlphanumeric($event.keyCode) && !this.selected.empty) {
           this.editCell(this._start[0], this._start[1], String.fromCharCode($event.keyCode));
           this.selected.clear();
@@ -261,10 +302,20 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
       }
     })
   }
+  
+  private isCell(obj: any): obj is Cell {
+    let res: boolean = obj != null && obj != undefined && typeof obj !== 'string' && typeof obj !== 'number';
+    // if (res) { // (add later)
+    //   if (!res.value && !res.selector)
+    //     throw new Error('Either a primitive value or a template selector must be defined!');
+    // }
+    return res;
+  }
 
   private deRegisterHandlers(): void {
     this.moveListener();
     this.editListener();
+    this.clickListener();
   }
 
   public editCell(i: number, j: number, init?: string) {
@@ -304,8 +355,22 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
 
   public clearSelection() {
     if (!this.selected.empty) {
-      for (let val of this.selected.array()) this._data[val[0]][val[1]] = undefined;
+      for (let val of this.selected.array()) this.deleteCell(val[0], val[1]);
       this.dataChange.emit(this._data);
+    }
+  }
+
+  private deleteCell(i: number, j: number): boolean {
+    let cell = this._data[i][j];
+    if (this.isCell(cell)) {
+      if (cell.readOnly) return false;
+      else cell.value = undefined;
+      this.dataChange.emit(this._data);
+      return true;
+    } else {
+      this._data[i][j] = undefined;
+      this.dataChange.emit(this._data);
+      return true;
     }
   }
 
@@ -350,9 +415,9 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
     this._isSelecting = true;
     this.selected.add(i, j);
     this._start = [i, j];
-    document.addEventListener('mouseup', () => {
+    let mouseUpListener = this.renderer.listen(document, 'mouseup', () => {
       this._isSelecting = false;
-      document.removeEventListener('mouseup');
+      mouseUpListener();
     })
   }
 

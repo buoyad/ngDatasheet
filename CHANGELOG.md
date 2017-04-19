@@ -2,9 +2,12 @@
 
 * Fixed bug with not being able to exit directly from editing cell  
 * Added `ngOnDestroy` binding to clean up event listeners  
-* 
+* Added ability to define cells as read-only  
+  * This is done by adding in a `Cell` object instead of a `(string | number)` as an element in your `data` array and setting the `readOnly` property to `true`  
+* Added code scaffolding to allow for more custom behavior to be defined in the future.   
+  * Specifically, the ability to define custom templates to be transcluded via the `selector` property (NYI)
 
-## 0.4.1
+## 0.4.2
 
 * Fixed bug with keypress event listeners
 

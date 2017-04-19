@@ -26,14 +26,19 @@
     </ng-datasheet>
   </div>
 
-  <h3>Configuration options (coming soon)</h3>
+  <h3>Configuration options</h3>
 
   <p>
-    Configuration options will be passed in through the data property:
+    Configuration options are passed in through the data property. Setting the readOnly property results in the following:
   </p>
 
+  <div class="demo" style="width:300px">
+    <ng-datasheet [(data)]="dataReadOnly"></ng-datasheet>
+  </div>
+
+  <h3>Coming soon</h3>
   <ul>
-    <li>0.5.0
+    <li>0.5.0 (Released!)
       <ul>
         <li>
           <pre>readOnly</pre> property will re-format specified cells and disable editing.

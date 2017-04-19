@@ -43,7 +43,7 @@ public data: any[][] = [
 And bind to it in your template: 
 
 ```html
-<ng-datasheet [data]="data"></ng-datasheet>
+<ng-datasheet [(data)]="data"></ng-datasheet>
 ```
 Output:
 
