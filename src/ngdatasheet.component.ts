@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy, Input, Output, Inject, Renderer2, forwardRef, EventEmitter } from '@angular/core';
 import { Observable } from 'rxjs/Rx';
 
+import * as math from 'mathjs';
+
 
 const TAB_KEY = 9;
 const ENTER_KEY = 13;
@@ -11,12 +13,6 @@ const DOWN_KEY = 40;
 const DELETE_KEY = 46;
 const CTRL_KEY = 22;
 const SHIFT_KEY = 16;
-
-export enum HEADERS {
-  top,
-  side,
-  both
-}
 
 export class CoordinateMap {
   [propName: number]: Array<number>;
@@ -58,12 +54,12 @@ export interface Cell {
   selector: 'ng-datasheet',
   template: `
   <table>
-  <tr>
+  <tr *ngIf="_headers === 'top' || _headers === 'both'">
     <th></th>
     <ds-header class="readonly" *ngFor="let index of _w" [top]="true" [index]="index+1"></ds-header>
   </tr>  
   <tr *ngFor="let index of _h; let i = index;">
-    <ds-header class="readonly" [side]="true" [index]="index+1"></ds-header>
+    <ds-header *ngIf="_headers === 'side' || _headers === 'both'" class="readonly" [side]="true" [index]="index+1"></ds-header>
     <ng-template ngFor let-j [ngForOf]="_w">
       <ng-template [ngIf]="!isCell(_data[i][j])"> <!-- Not a complexly defined cell -->          
         <td (mouseover)="onHover($event, i, j)" 
@@ -191,9 +187,10 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
 
   public _headers: string = 'both'
   @Input() set headers(value: string) {
-    // if (!HEADERS[<any>value]) {
-    //   throw new Error('Valid')
-    // }
+    if (value !== 'top' && value !== 'side' && value !== 'both' && value !== 'none') {
+      throw new Error("Valid values for headers attribute are 'top', 'side', 'both', or 'none'");
+    }
+    this._headers = value;
   }
 
   public nm: Map<number, string | number>;

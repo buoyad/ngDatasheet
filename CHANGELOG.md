@@ -1,3 +1,7 @@
+## 0.5.1
+
+* Added `mathjs` dependency and ability to turn off headers dynamically
+
 ## 0.5.0
 
 * Fixed bug with not being able to exit directly from editing cell  

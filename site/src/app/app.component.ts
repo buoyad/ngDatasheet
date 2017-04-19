@@ -17,7 +17,7 @@ export class AppComponent {
     ['Total',                         ,       , 945 + .03*945]
   ]
 
-  public dataReadOnly: Cell[][] = new Array<Array<Cell>>();
+  public dataReadOnly: (Cell | number)[][] = new Array<Array<Cell>>();
 
   ngOnInit() {
     for (let i = 0; i < 5; i++) {
@@ -29,7 +29,7 @@ export class AppComponent {
     ]
     let movies = ["Up", "The Iron Giant", "Lawrence of Arabia", "Finding Nemo"]
     for (let i = 1; i < 5; i++) {
-      this.dataReadOnly[i] = [{value: movies[i - 1], readOnly: true}];
+      this.dataReadOnly[i] = [{value: movies[i - 1], readOnly: true}, 5-i+1];
     }
   }
 }

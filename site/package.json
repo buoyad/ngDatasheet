@@ -18,7 +18,7 @@
     "@angular/platform-browser-dynamic": "^4.0.1",
     "@angular/router": "^4.0.1",
     "core-js": "^2.4.1",
-    "ngdatasheet": "file:///mnt/c/Users/danny/Documents/UI/ngDatasheet/ngdatasheet-0.5.0.tgz",
+    "ngdatasheet": "^0.5.1",
     "rxjs": "5.0.1",
     "zone.js": "^0.8.4"
   },
