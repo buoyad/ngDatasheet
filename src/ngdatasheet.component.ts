@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Input, Output, Inject, Renderer2, forwardRef, EventEmitter } from '@angular/core';
-import { Observable } from 'rxjs/Rx';
+import { Observable, Subscription } from 'rxjs/Rx';
 
 import * as math from 'mathjs';
 
@@ -46,6 +46,7 @@ export class CoordinateMap {
 
 export interface Cell {
   value: string | number;
+  expression?: string;
   readOnly?: boolean;
   selector?: string; // NYI
 }
@@ -66,10 +67,11 @@ export interface Cell {
             (mousedown)="beginSelect($event, i, j)"
             [ngStyle]="{'text-align': alignment(_data[i][j])}"
             [ngClass]="{'selected': isSelected(i, j)}"
-            (dblclick)="this.editCell(i, j)">
+            (dblclick)="editCell(i, j)">
             <input *ngIf="isEditMode(i, j)" 
                   [id]="'input' + i + '_' + j"
-                  [(ngModel)]="_data[i][j]"/>
+                  [(ngModel)]="_data[i][j]"
+                  (mousedown)="stopPropagation($event)"/>
             <ng-template [ngIf]="!isEditMode(i, j)">
               <span>
                 {{ _data[i][j] }}
@@ -82,10 +84,17 @@ export interface Cell {
         <td (mouseover)="onHover($event, i, j)"
             (mousedown)="beginSelect($event, i, j)"
             [ngStyle]="{'text-align': alignment(_data[i][j].value)}"
-            [ngClass]="{'selected': isSelected(i, j), 'readonly': _data[i][j].readOnly}">
-            <span>
-              {{ _data[i][j].value }}
-            </span>
+            [ngClass]="{'selected': isSelected(i, j), 'readonly': _data[i][j].readOnly}"
+            (dblclick)="editCell(i, j)">
+            <input *ngIf="isEditMode(i, j); else display" 
+                  [id]="'input' + i + '_' + j"
+                  [(ngModel)]="_data[i][j].expression"
+                  (mousedown)="stopPropagation($event, [i, j])"/>
+            <ng-template #display>
+              <span>
+                {{ _data[i][j].value }}
+              </span>
+            </ng-template>
         </td>
       </ng-template>
     </ng-template>
@@ -98,6 +107,7 @@ export interface Cell {
       table-layout: fixed;
       font-family: sans-serif;
       cursor: cell;
+      box-sizing: border-box;
     }
 
     table td.selected, >>> th.selected {
@@ -150,18 +160,6 @@ export interface Cell {
 })
 export class NgDatasheetComponent implements OnInit, OnDestroy {
 
-  @Input() public set nameMap(nm: Map<number, string | number>) {
-    this.nm = nm;
-  }
-
-  public en: boolean = true;
-  @Input() private set enumerated(en: boolean) {
-    this.en = en;
-    if (!this.en && !this.nm) {
-      throw new Error('Cannot set datasheet to non-enumerated without supplying nameMap!')
-    }
-  }
-
   private _w: number[];
   @Input() public width: number;
 
@@ -193,8 +191,6 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
     this._headers = value;
   }
 
-  public nm: Map<number, string | number>;
-
   public get isEditing(): boolean {
     return this._isEditing;
   }
@@ -213,6 +209,7 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
   private moveListener: () => void;
   private editListener: () => void;
   private clickListener: () => void;
+  private dataListener: Subscription;
 
   constructor(private renderer: Renderer2) { }
 
@@ -242,7 +239,12 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
   private registerHandlers() {
     this.clickListener = this.renderer.listen('window', 'mousedown', ($event) => {
       setTimeout(() => {
-        if (!this._isSelecting) this.selected.clear();
+        // if (!this._isSelecting) {
+        //   this.selected.clear();
+        //   // if (this._isEditing) this.onEditComplete();
+        // }
+        this.selected.clear();
+        this.onEditComplete();
       }, 0)
     })
     this.editListener = this.renderer.listen('document', 'keypress', ($event) => {
@@ -259,26 +261,26 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
         let moved: boolean = false;
         switch ($event.keyCode) {
           case UP_KEY:
+            if (this._isEditing) break;
             $event.preventDefault();
-            if (this._isEditing) this.onEditComplete();
             if (this._start[0] > 0) this._start[0]--;
             moved = true;
             break;
           case DOWN_KEY:
+            if (this._isEditing) break;
             $event.preventDefault();
-            if (this._isEditing) this.onEditComplete();
             if (this._start[0] < this.height - 1) this._start[0]++;
             moved = true;
             break;
           case RIGHT_KEY:
+            if (this._isEditing) break;
             $event.preventDefault();
-            if (this._isEditing) this.onEditComplete();
             if (this._start[1] < this.width - 1) this._start[1]++;
             moved = true;
             break;
           case LEFT_KEY:
+            if (this._isEditing) break;
             $event.preventDefault();
-            if (this._isEditing) this.onEditComplete();
             if (this._start[1] > 0) this._start[1]--;
             moved = true;
             break;
@@ -286,7 +288,11 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
             return;
           case ENTER_KEY:
             if (this._isEditing) this.onEditComplete();
-            if (this._start) this.fillSelection(this._start[0], this._start[1], this._start[0], this._start[1]);
+            else
+              if (this._start) {
+                this.fillSelection(this._start[0], this._start[1], this._start[0], this._start[1]);
+                this.editCell(this._start[0], this._start[1]);
+              }
             break;
           case DELETE_KEY:
             this.clearSelection();
@@ -297,9 +303,12 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
           this.selected.add(this._start[0], this._start[1]);
         }
       }
-    })
+    });
+    this.dataListener = this.dataChange.subscribe((value: any[]) => {
+      this.refreshValues();
+    });
   }
-  
+
   private isCell(obj: any): obj is Cell {
     let res: boolean = obj != null && obj != undefined && typeof obj !== 'string' && typeof obj !== 'number';
     // if (res) { // (add later)
@@ -309,45 +318,94 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
     return res;
   }
 
+  private toCell(obj: (string | number)): Cell {
+    return {
+      value: obj,
+      expression: <string>(obj)
+    }
+  }
+
   private deRegisterHandlers(): void {
     this.moveListener();
     this.editListener();
     this.clickListener();
+    this.dataListener.unsubscribe();
+  }
+
+  private stopPropagation(event: Event, cell: [number, number]) {
+    if (cell !== this._start)
+      event.stopPropagation();
   }
 
   public editCell(i: number, j: number, init?: string) {
     this._isEditing = true;
     this._editCell = [i, j];
+    if (this.isCell(this._data[i][j]) && !this._data[i][j].expression) {
+      this._data[i][j].expression = this._data[i][j].value;
+    }
     setTimeout(() => {                                         // Wait for input to be rendered
       let input: HTMLInputElement =
         <HTMLInputElement>document
           .getElementById('input' + i + '_' + j);
       input.focus();
       if (init) {
-        this._data[i][j] = init;
-        this.dataChange.emit(this._data);
+        if (this.isCell(this._data[i][j])) this._data[i][j].expression = init;
+        else this._data[i][j] = init;
       }
       else input.select();
     }, 1);
   }
 
   private onEditComplete() {
-    /* Check if value is a number */
-    let [i, j] = this._editCell;
-    let val = this._data[i][j];
-    // If so, convert to number
-    if (!isNaN(val)) this._data[i][j] = +val;
+    if (!this._editCell) return;      // Don't throw undefined errors pls
+    let [i, j] = this._editCell;      // Grab the index numbers
+    let val = this._data[i][j];       // Grab the cell contents
+    if (this.isCell(val)) {
+      val = val.expression;           // Make sure we have the user's input
+    }
+    let res: string | number;         // This will be the display value
+    if (val && !isNaN(val)) res = +val;                       // If the user inputs a number
+    else if (val && (val[0] === '=' || val[0] === '+')) {      // Check if user intends to calculate something
+      if (!this.isCell(this._data[i][j])) this._data[i][j] = this.toCell(this._data[i][j]);
+      res = this.evalExpression(val);
+    }
+    else res = val;                   // If not an expression, return the user input;
+
+    if (this.isCell(this._data[i][j])) {
+      this._data[i][j].value = res;
+      this._data[i][j].expression = val;
+    }
+    else this._data[i][j] = res;
 
     // Empty out variables and emit new data
     this._isEditing = false;
     this._editCell = null;
     this.dataChange.emit(this._data);
+  }
 
-    // console.log(isNaN(<any>val))
-    // if (!isNaN(<any>val)) {
-    //   this._data[i][j] = <number> val;
-    // } 
-    // console.log(this._data[i][j], typeof this._data[i][j])
+  private getScope(): { [propName: string]: number } {
+    let res: { [propName: string]: number } = {};
+    for (let i = 0; i < this.width; i++) {
+      for (let j = 0; j < this.height; j++) {
+        let propname = HeaderCellComponent.toLetters(i + 1) + (j + 1);
+        try {
+          res[propname] = this.getNumericValue(this._data[j][i]);
+        } catch (err) {
+          delete res[propname];
+        }
+      }
+    }
+    return res;
+  }
+
+  private getNumericValue(obj: number | string | Cell): number {
+    if (this.isCell(obj)) {
+      if (typeof obj.value === 'string') throw new Error('String value supplied!');
+      return obj.value | 0;
+    }
+    if (typeof obj === 'string') throw new Error('String value supplied!');
+    if (!obj) return 0;
+    return obj;
   }
 
   public clearSelection() {
@@ -355,6 +413,36 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
       for (let val of this.selected.array()) this.deleteCell(val[0], val[1]);
       this.dataChange.emit(this._data);
     }
+  }
+
+  private refreshValues() {
+    let changed: boolean = false;  // Only re-emit data if values change
+    for (let row of this._data) {
+      for (let cell of row) {
+        if (cell && cell.expression) {
+          let result = this.evalExpression(cell.expression);
+          if (result != cell.value) {
+            cell.value = this.evalExpression(cell.expression);
+            changed = true;
+          }
+        } 
+      }
+    }
+    if (changed) this.dataChange.emit(this._data);
+  }
+
+  private evalExpression(exp: string): string | number {
+    if (!isNaN(<any>exp)) return +exp;
+    if (exp[0] !== '=' && exp[0] !== '+') return exp;
+    let res;         // Shush type checks
+    exp = exp.slice(1);             // Cut off operator
+    try {
+      let scope = this.getScope();  // Get cell -> value mappings
+      res = math.eval(exp, scope);  // Evaluate the expression
+    } catch (error) {
+      res = "Error"                 // Show user 'Error'
+    }
+    return res;
   }
 
   private deleteCell(i: number, j: number): boolean {
@@ -377,7 +465,7 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
 
   private isAlphanumeric(code: number): boolean {
     let inp = String.fromCharCode(code);
-    return (/[a-zA-Z0-9-_ ]/.test(inp))
+    return (/[a-zA-Z0-9-=+_ ]/.test(inp))
   }
 
   public fillSelection(x1: number, y1: number, x2: number, y2: number) {
@@ -404,6 +492,7 @@ export class NgDatasheetComponent implements OnInit, OnDestroy {
     if (this.isEditMode(i, j)) return;
     else if (this._isEditing) this.onEditComplete();
     event.preventDefault();
+    event.stopPropagation();
     if (event.ctrlKey) {
       this.selected.clear();
       return;
@@ -450,18 +539,18 @@ export class HeaderCellComponent implements OnInit {
 
   ngOnInit() {
     if (this.top) {
-      this.letters = this.toLetters(this.index)
+      this.letters = HeaderCellComponent.toLetters(this.index)
     }
   }
 
-  public toLetters(num: number): string {
+  public static toLetters(num: number): string {
     var mod = num % 26,
       pow = num / 26 | 0,
       out = mod ? String.fromCharCode(64 + mod) : (--pow, 'Z');
     return pow ? this.toLetters(pow) + out : out;
   }
 
-  public fromLetters(str: string): number {
+  public static fromLetters(str: string): number {
     var out = 0, len = str.length, pos = len;
     while (--pos > -1) {
       out += (str.charCodeAt(pos) - 64) * Math.pow(26, len - 1 - pos);

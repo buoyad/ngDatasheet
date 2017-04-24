@@ -1,3 +1,12 @@
+## 0.6.0
+
+* Fixed bug that allowed users to select multiple cells if a cell is being edited  
+* Added math.js equation parsing  
+* Added ability to reference other cells in equations  
+* Added data introspection to re-evaluate derived expressions once values change  
+  * This means that now, when an expression is intered into a cell that instance in the `data` array is 
+    converted into a `Cell`
+
 ## 0.5.1
 
 * Added `mathjs` dependency and ability to turn off headers dynamically
